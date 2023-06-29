@@ -1,0 +1,55 @@
+<!--
+	Features to support:
+
+		- component definition
+		- component children rendering
+		- props rendering, required by default, with optional tag to denote optional props
+		- components should be defined at top level
+		- for loops
+		- if statements vue like
+		- when rendering a template with a struct, be as strict as possible. If fails, log the prettified json structure of that struct.
+		- packages
+		- context implicit passing
+
+	special components:
+	q-slot, q-prop
+
+	special props
+
+	q-if, q-else-if, q-else, q-for, 
+-->
+
+<q-item>
+	<q-prop name="name"></q-prop>
+	<q-prop name="isUnavailable" type="boolean"></q-prop>
+	<q-prop name="isAwesome" type="boolean" optional></q-prop>
+
+	<li q-if="isUnavailable">
+		{{ name }} - Unavailable
+	</li>
+	<li q-else>
+		{{ name }}
+	</li>
+
+</q-item>
+
+<q-category>
+	<q-prop name="title"></q-prop>
+	<q-prop name="isHidden" type="boolean"></q-prop>
+
+	<div q-if="!isHidden">
+		<h3>{{ title }}</h3>
+		<ul>
+			<q-slot></q-slot>
+		</ul>
+	</div>
+</q-category>
+
+<q-shopping-list>
+	<div class="shopping-list">
+		<q-category q-for="category in .Categories" title="category.title" isHidden="category.isHidden">
+			<q-item q-for="item in category.items" name="item.name" isUnavailable="item.isUnavailable" />
+		</q-category>
+	</div>
+</q-shopping-list>
+
