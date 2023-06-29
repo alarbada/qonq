@@ -1,5 +1,10 @@
 package main
 
+import (
+	"fmt"
+	"strings"
+)
+
 type TokenKind uint8
 
 const (
@@ -10,7 +15,29 @@ const (
 	TagNameEnd
 	PropName
 	PropValue
+	Text
 )
+
+func (this TokenKind) String() string {
+	switch this {
+	case Illegal:
+		return "Illegal"
+	case EOF:
+		return "EOF"
+	case TagNameStart:
+		return "TagNameStart"
+	case TagNameEnd:
+		return "TagNameEnd"
+	case PropName:
+		return "PropName"
+	case PropValue:
+		return "PropValue"
+	case Text:
+		return "Text"
+	default:
+		return "Unknown"
+	}
+}
 
 type Token struct {
 	Kind TokenKind
@@ -39,12 +66,15 @@ func (this *Lexer) read() string {
 	return string(ch)
 }
 
+func (this *Lexer) backTimes(times int) {
+	this.pos -= times
+}
+
 func (this *Lexer) readTimes(times int) string {
-	s := this.input[this.pos:this.pos+times]
+	s := this.input[this.pos : this.pos+times]
 	this.pos += times
 	return s
 }
-
 
 func (this *Lexer) skipWhitespace() {
 	for this.peek() == ' ' || this.peek() == '\t' || this.peek() == '\n' || this.peek() == '\r' {
@@ -52,19 +82,64 @@ func (this *Lexer) skipWhitespace() {
 	}
 }
 
+func (this *Lexer) indexRune(r rune) int {
+	return strings.IndexRune(this.input[this.pos:], r)
+}
+
 func (this *Lexer) NextToken() Token {
 	this.skipWhitespace()
 
 	if ch := this.peek(); ch == '<' {
-		if this.readTimes(2) == "q-" {
+		if this.readTimes(3) == "<q-" {
+			posEndTag := this.indexRune('>')
+			start := this.pos
+			this.pos += posEndTag
+			end := this.pos
+			this.pos++ // skip >
 
-			// posSpace := strings.IndexRune(this.input[this.pos:], ' ')
-			// posEndTag := strings.IndexRune(this.input[this.pos:], '>')
-
-
+			return Token{TagNameStart, this.input[start:end]}
+		} else {
+			this.backTimes(3)
 		}
+
+		if this.readTimes(4) == "</q-" {
+			posEndTag := this.indexRune('>')
+			start := this.pos
+			this.pos += posEndTag
+			end := this.pos
+			this.pos++ // skip >
+
+			return Token{TagNameEnd, this.input[start:end]}
+		} else {
+			this.backTimes(4)
+		}
+
+		this.read() // skip <
+		nextTokenPos := this.indexRune('<')
+		this.backTimes(1)
+		if nextTokenPos != -1 {
+			start := this.pos
+			this.pos += nextTokenPos
+			this.pos++
+			end := this.pos
+
+			return Token{Text, this.input[start:end]}
+		}
+
+		return Token{EOF, ""}
 	}
 
+	nextTokenPos := this.indexRune('<')
+	if nextTokenPos != -1 {
+		start := this.pos
+		this.pos += nextTokenPos
+		this.pos++
+		end := this.pos
+
+		return Token{Text, this.input[start:end]}
+	}
+
+	return Token{EOF, ""}
 }
 
 var contentsSimple = `
@@ -97,6 +172,6 @@ func main() {
 		if tok.Kind == EOF {
 			break
 		}
-		println(tok.Kind, tok.Val)
+		fmt.Println(tok.Kind, tok.Val)
 	}
 }
